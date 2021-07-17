@@ -1,46 +1,39 @@
-const {
-    Datastore
-} = require('@google-cloud/datastore');
-
 class BaseGame {
     player;
     channel;
 
     entity = {};
 
-    db = new Datastore({
-        namespace: 'partytime'
-    });
-
-    constructor(req, res, config) {
-        this.helpers = require('../helpers')(req, res);
-        this.channel = req.body.channel_id;
-        this.player = req.body.member ? req.body.member.user.id.toString() : req.body.user.id.toString();
-        this.options = req.body.data.options;
-	this.config = config;
+    constructor(GameBot) {
+        this.channel = GameBot.req.channel_id;
+        this.player = GameBot.req.member ? GameBot.req.member.user.id.toString() : GameBot.req.user.id.toString();
+        this.options = GameBot.req.data.options;
+        this.helpers = require('../helpers.js')(GameBot);
+	this.workingDirectory = GameBot.workingDirectory;
 
         if (this.constructor.name == 'BaseGame') {
-            const query = this.db.createQuery('Game').filter('channel', '=', this.channel).order('createdAt', {
+            const query = this.helpers.db.createQuery('Game').filter('channel', '=', this.channel).order('createdAt', {
                 descending: true
             });
 
-            this.db.runQuery(query, (err, entities, info) => {
+            this.helpers.db.runQuery(query, (err, entities, info) => {
                 if (err || entities.length == 0 || entities[0].state == 'done') {
-                    this[req.body.data.name]();
+                    this[GameBot.req.data.name]();
                 } else {
-                    req.body.entity = entities[0];
+                    GameBot.req.entity = entities[0];
 
-                    var ActiveGame = require(`${this.config.hostDirectory}/games/${req.body.entity.game}`)(this);
-                    new ActiveGame(req, res);
+                    const BaseGame = require('./_base.js');
+                    const ActiveGame = require(`${GameBot.workingDirectory}/games/${GameBot.req.entity.game}`).Game(BaseGame);
+                    new ActiveGame(GameBot);
                 }
             });
         } else {
-            this.entity = req.body.entity;
+            this.entity = GameBot.req.entity;
             this.init(() => {
-                if (req.body.data.component_type) {
-                    this.play(req.body.data);
+                if (GameBot.req.data.component_type) {
+                    this.play(GameBot.req.data);
                 } else {
-                    this[req.body.data.name]();
+                    this[GameBot.req.data.name]();
                 }
             });
         }
@@ -53,7 +46,7 @@ class BaseGame {
     setup() {
         if (this.constructor.name == 'BaseGame') {
             this.helpers.saveData([{
-                key: this.db.key('Game'),
+                key: this.helpers.db.key('Game'),
                 data: {
                     channel: this.channel,
                     game: this.options.game,
@@ -64,20 +57,20 @@ class BaseGame {
                     ]
                 }
             }], (entities) => {
-                var gameID = entities[0].key.id;
+                const gameID = entities[0].key.id;
                 this.helpers.saveData([{
-                    key: this.db.key('Player', `${gameID}_${this.player}`),
+                    key: this.helpers.db.key('Player', `${gameID}_${this.player}`),
                     data: {
                         game: gameID,
                         player: this.player
                     }
                 }], () => {
-                    var newGame = require(`./${this.options.game}`);
+                    const NewGame = require(`${this.workingDirectory}/games/${this.options.game}`);
                     this.helpers.respond({
                         "content": "Setting up the game..."
                     }, () => {
                         this.helpers.sendMessage({
-                            "content": `<@${this.player}> has initiated a new game of ${newGame.prototype.displayName}!  Type **/join** to get in on the action and **/start** to begin the game.`
+                            "content": `<@${this.player}> has initiated a new game of ${NewGame.Name}!  Type **/join** to get in on the action and **/start** to begin the game.`
                         });
                     });
                 });
@@ -117,12 +110,12 @@ class BaseGame {
                 }, () => {
                     this.entity.players.push(this.player);
                     this.helpers.saveData([{
-                        key: this.entity[this.db.KEY],
+                        key: this.entity[this.helpers.db.KEY],
                         data: this.entity
                     }, {
-                        key: this.db.key('Player', `${this.entity[this.db.KEY].id}_${this.player}`),
+                        key: this.helpers.db.key('Player', `${this.entity[this.helpers.db.KEY].id}_${this.player}`),
                         data: {
-                            game: this.entity[this.db.KEY].id,
+                            game: this.entity[this.helpers.db.KEY].id,
                             player: this.player
                         }
                     }], () => {
@@ -176,7 +169,7 @@ class BaseGame {
             }, () => {
                 this.entity.state = 'active';
                 this.helpers.saveData([{
-                    key: this.entity[this.db.KEY],
+                    key: this.entity[this.helpers.db.KEY],
                     data: this.entity
                 }], () => {
                     this.startGame();

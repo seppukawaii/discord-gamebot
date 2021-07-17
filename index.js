@@ -1,29 +1,27 @@
 const nacl = require('tweetnacl');
 const axios = require('axios');
 const https = require('https');
-const path = require('path');
 const fs = require('fs');
 
-class GameBot {
-	config = {};
-
+module.exports = class GameBot {
     constructor(config) {
-        const hostDirectory = path.dirname(require.main.filename);
         const defaultConfig = {
-            hostDirectory: hostDirectory,
-            secrets: `${hostDirectory}/secrets.json`,
-            endpoint: `https://${req.headers.host}/${process.env.K_SERVICE}`
+            workingDirectory: '/workspace',
+            secretsFile: `secrets.json`,
+            dbConfig: {}
         };
 
         Object.entries(defaultConfig).forEach(entry => {
             const [key, value] = entry;
 
             if (config[key]) {
-                this.config[key] = config[key];
+                this[key] = config[key];
             } else {
-                this.config[key] = value;
+                this[key] = value;
             }
         });
+
+        this.secrets = JSON.parse(fs.readFileSync(this.workingDirectory + '/' + this.secretsFile, 'utf8'));
     }
 
     interactions(req, res) {
@@ -52,7 +50,7 @@ class GameBot {
                         httpsAgent: new https.Agent({
                             keepAlive: true
                         }),
-                        url: this.config.endpoint,
+                        url: `https://${req.headers.host}/${process.env.K_SERVICE}`,
                         method: req.method,
                         headers: {
                             'X-Signature-Ed25519': req.get('X-Signature-Ed25519'),
@@ -73,21 +71,25 @@ class GameBot {
                         }), {});
                     }
 
-                    fs.access(`${this.config.hostDirectory}/games/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
+                    this.req = req.body;
+                    this.end = function() {
+                        res.end();
+                    }
+
+                    fs.access(`${this.workingDirectory}/functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
                         if (err) {
-                            var Game = require('./games/_base');
-                            new Game(req, res, this.config);
+                            const BaseGame = require('./games/_base.js');
+                            new BaseGame(this);
                         } else {
-                            require(`${this.config.hostDirectory}/functions/${req.body.data.name}`).interaction(req, res);
+                            require(`${this.workingDirectory}/functions/${req.body.data.name}`).interaction(this);
                         }
                     });
                 }
             } catch (err) {
-                console.log(err);
                 res.status(200).json({
                     "type": 4,
                     "data": {
-                        "content": "Sorry, but something went wrong.",
+                        "content": `Sorry, but something went wrong. (${err.toString()})`,
                         "flags": 64
                     }
                 });
@@ -95,5 +97,3 @@ class GameBot {
         }
     }
 }
-
-module.exports = GameBot;
