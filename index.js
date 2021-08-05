@@ -64,7 +64,7 @@ module.exports = class GameBot {
                         let response = {
                             type: 5
                         };
-                        if (!command.publicAck) {
+                        if (!command || !command.publicAck) {
                             response.data = {
                                 flags: 64
                             }
