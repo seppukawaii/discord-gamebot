@@ -11,9 +11,7 @@ module.exports = function(GameBot) {
 
     this.workingDirectory = GameBot.workingDirectory;
 
-    this.db = new Datastore({
-        namespace: 'birdybot'
-    });
+    this.db = new Datastore(GameBot.dbConfig);
 
     this.shuffle = function(array) {
         for (let i = array.length - 1; i > 0; i--) {
