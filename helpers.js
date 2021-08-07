@@ -3,7 +3,7 @@ const {
     Datastore
 } = require('@google-cloud/datastore');
 
-module.exports = function(GameBot) {
+function Helpers (GameBot) {
     this.interaction = {
         id: GameBot.req.id,
         token: GameBot.req.token
@@ -12,8 +12,9 @@ module.exports = function(GameBot) {
     this.workingDirectory = GameBot.workingDirectory;
 
     this.db = new Datastore(GameBot.dbConfig);
+}
 
-    this.shuffle = function(array) {
+Helpers.prototype.shuffle = function(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * i);
             const temp = array[i];
@@ -24,7 +25,7 @@ module.exports = function(GameBot) {
         return array;
     }
 
-    this.normalize = function(input) {
+Helpers.prototype.normalize = function(input) {
         if (input.normalize) {
             return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         } else {
@@ -33,7 +34,7 @@ module.exports = function(GameBot) {
     }
 
 
-    this.respond = function(content, callback) {
+Helpers.prottoype.respond = function(content, callback) {
         return axios.patch(
                 `https://discord.com/api/v8/webhooks/${GameBot.secrets.APPLICATION_ID}/${this.interaction.token}/messages/@original`,
                 content, {
@@ -54,7 +55,7 @@ module.exports = function(GameBot) {
             });
     }
 
-    this.sendMessage = function(content, callback) {
+Helpers.prototype.sendMessage = function(content, callback) {
         return axios.post(
                 `https://discord.com/api/v8/webhooks/${GameBot.secrets.APPLICATION_ID}/${this.interaction.token}`,
                 content, {
@@ -75,7 +76,7 @@ module.exports = function(GameBot) {
             });
     }
 
-    this.errorHandler = function(err) {
+ Helpers.prototype.errorHandler = function(err) {
         axios.post(
                 `https://discord.com/api/v8/webhooks/${GameBot.secrets.APPLICATION_ID}/${this.interaction.token}`, {
                     "content": "Sorry, but something went wrong. ``(" + err.toString() + ")``",
@@ -94,12 +95,12 @@ module.exports = function(GameBot) {
             });
     }
 
-    this.end = function() {
+Helpers.prototype.end = function() {
         GameBot.end();
     }
 
 
-    this.saveData = function(entities, callback) {
+Helpers.prototype.saveData = function(entities, callback) {
         const transaction = this.db.transaction();
         transaction.run((err) => {
             transaction.save(entities);
@@ -114,5 +115,6 @@ module.exports = function(GameBot) {
         });
     }
 
-    return this;
+module.exports = function (GameBot) {
+	return new Helpers(GameBot);
 }

@@ -60,16 +60,16 @@ module.exports = class GameBot {
                         },
                         data: req.body
                     });
-                        const command = this.commands.find((command) => command.name == req.body.data.name);
-                        let response = {
-                            type: 5
-                        };
-                        if (!command || !command.publicAck) {
-                            response.data = {
-                                flags: 64
-                            }
+                    const command = this.commands.find((command) => command.name == req.body.data.name);
+                    let response = {
+                        type: 5
+                    };
+                    if (!command || !command.publicAck) {
+                        response.data = {
+                            flags: 64
                         }
-                        res.status(200).json(response);
+                    }
+                    res.status(200).json(response);
                 } else {
                     if (req.body.data.options) {
                         req.body.data.options = req.body.data.options.reduce((obj, item) => Object.assign(obj, {
@@ -81,15 +81,21 @@ module.exports = class GameBot {
                     this.end = function() {
                         res.end();
                     }
-                    this.helpers = require('./helpers.js')(this);
 
-                    fs.access(`${this.workingDirectory}/functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
-                        if (err) {
-                            const BaseGame = require('./games/_base.js');
-                            new BaseGame(this);
-                        } else {
-                            require(`${this.workingDirectory}/functions/${req.body.data.name}.js`).interaction(this);
+                    this.helpers = require('./helpers.js')(this);
+                    fs.access(`${this.workingDirectory}/helpers.js`, fs.constants.R_OK, (err) => {
+                        if (!err) {
+                            this.helpers = require(`${this.workingDirectory}/helpers.js`)(this.helpers, this);
                         }
+
+                        fs.access(`${this.workingDirectory}/functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
+                            if (err) {
+                                const BaseGame = require('./games/_base.js');
+                                new BaseGame(this);
+                            } else {
+                                require(`${this.workingDirectory}/functions/${req.body.data.name}.js`).interaction(this);
+                            }
+                        });
                     });
                 }
             } catch (err) {
