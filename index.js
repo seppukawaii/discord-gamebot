@@ -72,6 +72,7 @@ module.exports = class GameBot {
                     res.status(200).json(response);
                 } else {
                     if (req.body.data.options) {
+			req.body.data.rawOptions = Object.assign({}, req.body.data.options);
                         req.body.data.options = req.body.data.options.reduce((obj, item) => Object.assign(obj, {
                             [item.name]: item.value
                         }), {});
@@ -82,10 +83,12 @@ module.exports = class GameBot {
                         res.end();
                     }
 
-                    this.helpers = require('./helpers.js')(this);
+                    var helpers = require('./helpers.js');
                     fs.access(`${this.workingDirectory}/helpers.js`, fs.constants.R_OK, (err) => {
                         if (!err) {
-                            this.helpers = require(`${this.workingDirectory}/helpers.js`)(this.helpers, this);
+                            this.helpers = require(`${this.workingDirectory}/helpers.js`)(helpers, this);
+                        } else {
+                            this.helpers = new helpers(this);
                         }
 
                         fs.access(`${this.workingDirectory}/functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
