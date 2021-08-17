@@ -5,18 +5,18 @@ class BaseGame {
     entity = {};
 
     constructor(GameBot) {
+	this.GameBot = GameBot;
         this.channel = GameBot.req.channel_id;
         this.player = GameBot.req.member ? GameBot.req.member.user.id.toString() : GameBot.req.user.id.toString();
         this.options = GameBot.req.data.options;
-        this.helpers = require('../helpers.js')(GameBot);
 	this.workingDirectory = GameBot.workingDirectory;
 
         if (this.constructor.name == 'BaseGame') {
-            const query = this.helpers.db.createQuery('Game').filter('channel', '=', this.channel).order('createdAt', {
+            const query = this.GameBot.helpers.db.createQuery('Game').filter('channel', '=', this.channel).order('createdAt', {
                 descending: true
             });
 
-            this.helpers.db.runQuery(query, (err, entities, info) => {
+            this.GameBot.helpers.db.runQuery(query, (err, entities, info) => {
                 if (err || entities.length == 0 || entities[0].state == 'done') {
                     this[GameBot.req.data.name]();
                 } else {
@@ -45,8 +45,8 @@ class BaseGame {
 
     setup() {
         if (this.constructor.name == 'BaseGame') {
-            this.helpers.saveData([{
-                key: this.helpers.db.key('Game'),
+            this.GameBot.helpers.saveData([{
+                key: this.GameBot.helpers.db.key('Game'),
                 data: {
                     channel: this.channel,
                     game: this.options.game,
@@ -58,25 +58,25 @@ class BaseGame {
                 }
             }], (entities) => {
                 const gameID = entities[0].key.id;
-                this.helpers.saveData([{
-                    key: this.helpers.db.key('Player', `${gameID}_${this.player}`),
+                this.GameBot.helpers.saveData([{
+                    key: this.GameBot.helpers.db.key('Player', `${gameID}_${this.player}`),
                     data: {
                         game: gameID,
                         player: this.player
                     }
                 }], () => {
                     const NewGame = require(`${this.workingDirectory}/games/${this.options.game}`);
-                    this.helpers.respond({
+                    this.GameBot.helpers.respond({
                         "content": "Setting up the game..."
                     }, () => {
-                        this.helpers.sendMessage({
+                        this.GameBot.helpers.sendMessage({
                             "content": `<@${this.player}> has initiated a new game of ${NewGame.Name}!  Type **/join** to get in on the action and **/start** to begin the game.`
                         });
                     });
                 });
             });
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "There is already a game running.",
             });
         }
@@ -86,7 +86,7 @@ class BaseGame {
         if (this.entity.state == 'active') {
             return true;
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "The game hasn't started yet. Maybe you want to **/start** it?"
             });
 
@@ -96,37 +96,37 @@ class BaseGame {
 
     join() {
         if (this.entity.state == 'active') {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "The game has already started."
             });
         } else if (this.entity.state == 'pending') {
             if (this.entity.players.includes(this.player)) {
-                this.helpers.respond({
+                this.GameBot.helpers.respond({
                     "content": "You already joined this game!",
                 });
             } else {
-                this.helpers.respond({
+                this.GameBot.helpers.respond({
                     "content": "Joining the game..."
                 }, () => {
                     this.entity.players.push(this.player);
-                    this.helpers.saveData([{
-                        key: this.entity[this.helpers.db.KEY],
+                    GameBot.helpers.saveData([{
+                        key: this.entity[this.GameBot.helpers.db.KEY],
                         data: this.entity
                     }, {
-                        key: this.helpers.db.key('Player', `${this.entity[this.helpers.db.KEY].id}_${this.player}`),
+                        key: this.GameBot.helpers.db.key('Player', `${this.entity[this.GameBot.helpers.db.KEY].id}_${this.player}`),
                         data: {
-                            game: this.entity[this.helpers.db.KEY].id,
+                            game: this.entity[this.GameBot.helpers.db.KEY].id,
                             player: this.player
                         }
                     }], () => {
-                        this.helpers.sendMessage({
+                        this.GameBot.helpers.sendMessage({
                             "content": `<@${this.player}> has joined the game!`
                         });
                     });
                 });
             }
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "There isn't a game running right now. Maybe you want to /setup one?"
             });
         }
@@ -136,7 +136,7 @@ class BaseGame {
         if (this.entity.players.includes(this.player)) {
             return true;
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "You aren't signed up for this game."
             });
             return false;
@@ -148,7 +148,7 @@ class BaseGame {
             if (this.player == this.entity.players[this.entity.currentPlayer]) {
                 return true;
             } else {
-                this.helpers.respond({
+                this.GameBot.helpers.respond({
                     "content": "You aren't the active player yet."
                 });
                 return false;
@@ -160,23 +160,23 @@ class BaseGame {
 
     start() {
         if (this.entity.state == 'active') {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "The game has already started."
             });
         } else if (this.entity.state == 'pending') {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "Starting the game..."
             }, () => {
                 this.entity.state = 'active';
-                this.helpers.saveData([{
-                    key: this.entity[this.helpers.db.KEY],
+                this.GameBot.helpers.saveData([{
+                    key: this.entity[this.GameBot.helpers.db.KEY],
                     data: this.entity
                 }], () => {
                     this.startGame();
                 });
             });
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "There isn't a game running right now. Maybe you want to /setup one?"
             });
         }
@@ -188,11 +188,11 @@ class BaseGame {
 
     notAnOption() {
         if (this.constructor.name == "BaseGame") {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "There isn't a game running right now. Maybe you want to /setup one?"
             });
         } else {
-            this.helpers.respond({
+            this.GameBot.helpers.respond({
                 "content": "That isn't a valid option right now."
             });
         }
