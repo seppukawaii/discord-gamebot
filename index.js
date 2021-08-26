@@ -47,6 +47,8 @@ module.exports = class GameBot {
             });
         } else {
             try {
+                const commandName = req.overwrite && req.overwrite.commandName ? req.overwrite.commandName : req.body.data.name;
+
                 if (/Discord\-Interactions\/[\d\.]+ \(\+https:\/\/discord.com\)/.test(req.get('user-agent'))) {
                     axios({
                         httpsAgent: new https.Agent({
@@ -60,7 +62,7 @@ module.exports = class GameBot {
                         },
                         data: req.body
                     });
-                    const command = this.commands.find((command) => command.name == req.body.data.name);
+                    const command = this.commands.find((command) => command.name == commandName);
                     let response = {
                         type: 5
                     };
@@ -72,7 +74,7 @@ module.exports = class GameBot {
                     res.status(200).json(response);
                 } else {
                     if (req.body.data.options) {
-			req.body.data.rawOptions = Object.assign({}, req.body.data.options);
+                        req.body.data.rawOptions = Object.assign({}, req.body.data.options);
                         req.body.data.options = req.body.data.options.reduce((obj, item) => Object.assign(obj, {
                             [item.name]: item.value
                         }), {});
@@ -91,12 +93,12 @@ module.exports = class GameBot {
                             this.helpers = new helpers(this);
                         }
 
-                        fs.access(`${this.workingDirectory}/functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
+                        fs.access(`${this.workingDirectory}/functions/${commandName}.js`, fs.constants.R_OK, (err) => {
                             if (err) {
                                 const BaseGame = require('./games/_base.js');
                                 new BaseGame(this);
                             } else {
-                                require(`${this.workingDirectory}/functions/${req.body.data.name}.js`).interaction(this);
+                                require(`${this.workingDirectory}/functions/${commandName}.js`).interaction(this);
                             }
                         });
                     });

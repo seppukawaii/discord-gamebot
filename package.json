@@ -1,6 +1,6 @@
 {
   "name": "discord-gamebot",
-  "version": "1.2.29",
+  "version": "1.2.34",
   "description": "",
   "main": "index.js",
   "scripts": {

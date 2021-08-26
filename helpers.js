@@ -78,6 +78,25 @@ Helpers.prototype.sendMessage = function(content, callback) {
         });
 }
 
+Helpers.prototype.deleteMessage = function(messageId, callback) {
+    return axios.delete(
+        `https://discord.com/api/v8/webhooks/${this.GameBot.secrets.APPLICATION_ID}/${this.interaction.token}/messages/${messageId}`, {}, {
+            headers: {
+                "Authorization": `Bot ${this.GameBot.secrets.BOT_TOKEN}`
+            }
+        }
+    ).catch((err) => {
+        console.log(err.toString());
+    }).finally(() => {
+        if (callback) {
+            callback();
+        } else {
+            this.GameBot.end();
+        }
+    });
+
+}
+
 Helpers.prototype.errorHandler = function(err) {
     axios.post(
             `https://discord.com/api/v8/webhooks/${this.GameBot.secrets.APPLICATION_ID}/${this.interaction.token}`, {
